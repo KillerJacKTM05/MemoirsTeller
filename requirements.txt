@@ -1,6 +1,24 @@
-gradio
-transformers
-Pillow
-torch
-openai
-python-dotenv
+# Core UI and app framework
+gradio>=4.26.0
+
+# OpenAI client
+openai>=1.11.0
+
+# Hugging Face Transformers & BLIP
+transformers>=4.40.0
+huggingface-hub>=0.20.0
+sentencepiece 
+
+# BLIP requires torch & torchvision
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Image handling
+Pillow>=10.0.0
+
+# Load environment variables from .env
+python-dotenv>=1.0.0
+
+# Optional (markdown export and TTS for later)
+# markdown2>=2.4.10
+# pyttsx3>=2.90
