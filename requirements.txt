@@ -20,5 +20,6 @@ Pillow>=10.0.0
 python-dotenv>=1.0.0
 
 # Optional (markdown export and TTS for later)
+TTS>=0.22.0
 # markdown2>=2.4.10
 # pyttsx3>=2.90

@@ -5,6 +5,14 @@ from PIL import Image
 import torch
 import openai
 from datetime import datetime
+import uuid
+import os
+from TTS.api import TTS
+# Load a multi-speaker expressive model
+
+#tts_model = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC", progress_bar=False, gpu=False)
+tts_model = TTS(model_name="tts_models/en/vctk/vits", progress_bar=False, gpu=False)
+
 
 # Try loading from .env if available
 try:
@@ -192,6 +200,46 @@ def save_current_story(story, caption, style, mood, setting_time, character_info
     }
     return save_story(story, caption, metadata)
 
+def story_to_speech_coqui(story_text: str, mood: str):
+    if not story_text.strip():
+        return None, "No story to convert."
+
+    try:
+        speaker = voice_mapping.get(mood, "p294")  # default fallback
+        filename = f"story_{uuid.uuid4().hex}.wav"
+        filepath = os.path.join("audio", filename)
+        os.makedirs("audio", exist_ok=True)
+
+        tts_model.tts_to_file(text=story_text, speaker=speaker, file_path=filepath)
+        return filepath, f"Generated voice with speaker: {speaker}"
+    except Exception as e:
+        return None, f"TTS error: {str(e)}"
+
+
+    
+voice_mapping = {
+    "Nostalgic and Melancholic": "p294",   # calm male
+    "Mysterious and Intriguing": "p313",   # whispery tone
+    "Dark and Brooding": "p362",           # deeper voice
+    "Romantic and Dreamy": "p276",         # soft female
+    "Joyful and Uplifting": "p243",        # bright tone
+    "Adventurous and Exciting": "p251",    # energetic
+    "Peaceful and Serene": "p255",         # slow pace
+    "Humorous and Light-hearted": "p228"   # playful
+}
+
+font_mapping = {
+    "Nostalgic and Melancholic": "Georgia, serif",
+    "Mysterious and Intriguing": "'Courier New', monospace",
+    "Dark and Brooding": "'Times New Roman', serif",
+    "Romantic and Dreamy": "'Brush Script MT', cursive",
+    "Joyful and Uplifting": "Comic Sans MS, cursive, sans-serif",
+    "Adventurous and Exciting": "'Trebuchet MS', sans-serif",
+    "Peaceful and Serene": "'Lucida Handwriting', cursive",
+    "Humorous and Light-hearted": "'Comic Sans MS', cursive"
+}
+
+
 # Options for storytelling
 literary_styles = [
     "Edgar Allan Poe (Gothic Horror)",
@@ -232,6 +280,8 @@ time_periods = [
     "1950s Post-War",
     "Wild West (1800s)"
 ]
+
+
 
 # Gradio UI
 with gr.Blocks(title="Memoirs Teller - Story Creator Agent", theme=gr.themes.Soft()) as demo:
@@ -277,7 +327,11 @@ with gr.Blocks(title="Memoirs Teller - Story Creator Agent", theme=gr.themes.Sof
 
     with gr.Row():
         generate_btn = gr.Button("✨ Generate Story", variant="primary", size="lg")
+        tts_button = gr.Button("🔊 Convert Story to Audio")
+
+    with gr.Row():
         save_btn = gr.Button("💾 Save Story", variant="secondary")
+        audio_output = gr.Audio(label="🎧 Listen to the Story", type="filepath")
 
     with gr.Row():
         with gr.Column():
@@ -286,6 +340,7 @@ with gr.Blocks(title="Memoirs Teller - Story Creator Agent", theme=gr.themes.Sof
             save_status = gr.Textbox(label="💾 Save Status", lines=1)
 
     story_output = gr.Textbox(label="📖 Your Generated Story", lines=15)
+    #story_output = gr.HTML(label="📖 Your Generated Story") #for variant fonts
 
     # Store metadata for saving
     metadata_state = gr.State()
@@ -295,6 +350,7 @@ with gr.Blocks(title="Memoirs Teller - Story Creator Agent", theme=gr.themes.Sof
         caption, story, metadata = memoirs_pipeline(*args)
         return caption, story, metadata
 
+    
     generate_btn.click(
         fn=generate_and_store,
         inputs=[
@@ -323,6 +379,11 @@ with gr.Blocks(title="Memoirs Teller - Story Creator Agent", theme=gr.themes.Sof
         outputs=[save_status]
     )
     
+    tts_button.click(
+        fn=story_to_speech_coqui,
+        inputs=[story_output, mood_input],
+        outputs=[audio_output, save_status]
+    )
     # Examples and tips
     gr.Markdown("### 💡 Tips for better stories:")
     gr.Markdown("""
@@ -350,6 +411,9 @@ with gr.Blocks(title="Memoirs Teller - Story Creator Agent", theme=gr.themes.Sof
     - "My grandmother Clara"
     - "Three friends at the beach"
     """)
+
+
+
 
 if __name__ == "__main__":
     demo.launch(share=False, server_name="127.0.0.1", server_port=7860)
